@@ -1,36 +1,32 @@
 # infra-hw-artigo
 
-Artigo científico – Análise experimental da hierarquia de memória em processador híbrido Intel i5-13420H (Infraestrutura de Hardware, CESAR School)
+Artigo cientifico - Analise experimental da hierarquia de memoria em processador hibrido Intel i5-13420H (Infraestrutura de Hardware, CESAR School)
 
 ## Ambiente
 
-- CPU: Intel Core i5-13420H (4P + 4E cores)
-- SO: Ubuntu 24.04 via WSL2
-- Python 3.12 + numpy + psutil
+- CPU: Intel Core i5-13420H (4P + 4E cores, 12 threads)
+- RAM: 7,6 GiB DDR4
+- Armazenamento: SSD NVMe SK Hynix
+- SO: Ubuntu 24.04.3 LTS via WSL2 (kernel 6.6.87)
+- Python 3 + numpy + psutil
 
 ## Estrutura
 
-```
-infra-hw-artigo/
-├── artigo/          # PDF final e fontes LaTeX (main.tex, referencias.bib)
-├── scripts/         # scripts Python dos experimentos
-├── dados/           # saídas brutas das medições (txt, png)
-└── evidencias/      # screenshots dos benchmarks
-```
+    infra-hw-artigo/
+    ├── artigo/          # PDF final e fontes LaTeX
+    └── scripts/         # scripts Python dos experimentos
 
 ## Scripts
 
-| arquivo | descrição |
+| arquivo | o que faz |
 |---|---|
-| `scripts/teste_localidade.py` | compara acesso por linhas vs. colunas numa matriz numpy para evidenciar localidade de cache |
-| `scripts/teste_paralelismo.py` | varia número de processos (1, 2, 4, max) e mede speedup e eficiência |
-| `scripts/workload_completo.py` | três fases (CPU-bound, memory-bound, I/O-bound) com monitoramento por núcleo via psutil |
+| scripts/teste_paralelismo.py | varia numero de processos (1, 2, 4, max) e mede speedup e eficiencia |
+| scripts/teste_localidade.py | compara acesso por linhas vs colunas numa matriz numpy para mostrar efeito de cache |
+| scripts/workload_completo.py | tres fases (CPU-bound, memory-bound, I/O-bound) com monitoramento por nucleo via psutil |
 
 ## Como rodar
 
-```bash
-pip install numpy psutil
-python scripts/teste_localidade.py
-python scripts/teste_paralelismo.py
-python scripts/workload_completo.py
-```
+    pip install numpy psutil
+    python3 scripts/teste_paralelismo.py
+    python3 scripts/teste_localidade.py
+    python3 scripts/workload_completo.py
