@@ -1,3 +1,3 @@
-acesso por linhas (sequencial): 0.0118 s
-acesso por colunas (saltos):    0.0944 s
-razao colunas/linhas:           7.99x
+acesso por linhas (sequencial): 1.88 s
+acesso por colunas (saltos):    1.99 s
+razao colunas/linhas:           1.06x
