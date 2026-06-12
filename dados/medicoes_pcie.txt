@@ -1,0 +1,7 @@
+=== lspci -vv - links PCIe ===
+
+Dispositivo          ID PCI      LnkCap     LnkSta
+-----------------------------------------------------
+Controlador NVMe     1C5C:1D59   Gen 4 x4   Gen 3 x4
+GPU                  10DE:28A1   Gen 4 x8   Gen 4 x8
+Controlador de rede  14C3:7961   Gen 2 x1   Gen 2 x1

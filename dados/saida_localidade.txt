@@ -1,3 +1,6 @@
-acesso por linhas (sequencial): 1.88 s
-acesso por colunas (saltos):    1.99 s
-razao colunas/linhas:           1.06x
+=== Teste de localidade espacial ===
+Matriz: 4000 x 4000 (float64)
+
+Loop A (linha por linha, sequencial): 4.54 s
+Loop B (coluna por coluna, com saltos): 5.17 s
+Razao B/A: 1.14x

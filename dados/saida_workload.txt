@@ -1,6 +1,9 @@
-[cpu]  0.121 s  ->  8268.5 Mop/s
-[mem]  0.117 s  ->  4.60 GB/s
-nucleos acima de 50% apos fase de memoria: 0
-[i/o]  0.216 s  ->  1244.6 MB/s
+=== Workload integrado ===
 
-banda de memoria medida: 4.60 GB/s
+[cpu]  89111.3 Mop/s
+[mem]  4.29 GB/s
+[i/o]  1192.1 MB/s
+
+Nucleos acima de 50%: 0 de 12
+
+Gargalo detectado: memory-bound

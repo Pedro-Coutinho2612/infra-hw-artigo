@@ -1,0 +1,7 @@
+=== mbw - largura de banda de memoria (modo Copy) ===
+
+ tamanho     vazao (MiB/s)   nivel
+------------------------------------
+  16 MiB         6900         L3/RAM
+ 128 MiB         7370         RAM
+1024 MiB         7363         RAM

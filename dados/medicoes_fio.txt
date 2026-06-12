@@ -1,0 +1,5 @@
+=== fio - benchmark de armazenamento ===
+Flags: --direct=1 --ioengine=libaio --time_based
+
+Sequencial 1M (read):  1527 MB/s
+Aleatorio 4k (randread): 1918 IOPS, latencia media 517 us

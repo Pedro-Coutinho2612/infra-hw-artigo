@@ -1,0 +1,7 @@
+=== /proc/interrupts - antes e depois de dd (2 GB, bs=1M) ===
+
+Linha de IRQ    Dispositivo                      Diferenca
+-------------------------------------------------------------
+CAL             Function call interrupts (IPI)   +2054
+HYP             Hypervisor callback interrupts   +2008
+HVS             Hyper-V stimer0                  +156

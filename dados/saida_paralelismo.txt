@@ -1,6 +1,12 @@
- processos   tempo (s)   speedup  eficiencia
----------------------------------------------
-         1       0.498     1.000      100.0%
-         2       0.446     1.116       55.8%
-         4       0.480     1.036       25.9%
-        12       0.452     1.101        9.2%
+=== Teste de paralelismo ===
+CPU: 13th Gen Intel Core i5-13420H (8 nucleos, 12 threads)
+Workload: ~10 MB de matrizes por tarefa
+
+ processos   tempo (s)   speedup   eficiencia
+----------------------------------------------
+         1       0.450     1.00x       100.0%
+         2       0.270     1.68x        84.2%
+         4       0.220     2.05x        51.3%
+        12       0.310     1.45x        12.1%
+
+Ponto otimo: 4 processos (0.22 s)

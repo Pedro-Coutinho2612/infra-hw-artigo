@@ -1,0 +1,5 @@
+=== Cinebench R23 ===
+Single Core: 2156.88 events/s
+Multi Core:  15808.60 events/s
+Fator de escala: 7.33x (ideal seria 12x)
+Eficiencia paralela: 61%
