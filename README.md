@@ -14,6 +14,7 @@ Artigo cientifico - Analise experimental da hierarquia de memoria em processador
 
     infra-hw-artigo/
     ├── artigo/          # PDF final e fontes LaTeX
+    ├── dados/           # medicoes originais do laboratorio
     └── scripts/         # scripts Python dos experimentos
 
 ## Scripts
