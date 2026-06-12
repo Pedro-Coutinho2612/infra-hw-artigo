@@ -1,0 +1,19 @@
+[cpu]    0.410 s  ->  24.4 Mop/s
+[mem]    0.123 s  ->  4.36 GB/s
+[i/o]    0.209 s  ->  1284.5 MB/s
+
+uso por nucleo (%):
+  nucleo 0: 0.0%
+  nucleo 1: 0.0%
+  nucleo 2: 0.0%
+  nucleo 3: 0.0%
+  nucleo 4: 0.0%
+  nucleo 5: 0.0%
+  nucleo 6: 0.0%
+  nucleo 7: 0.0%
+  nucleo 8: 0.0%
+  nucleo 9: 0.0%
+  nucleo 10: 1.0%
+  nucleo 11: 0.0%
+
+gargalo detectado: cpu (0.410 s)
