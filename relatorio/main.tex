@@ -21,6 +21,7 @@
 \usepackage{float}
 \usepackage{url}
 \usepackage{setspace}
+\usepackage[compact]{titlesec}	% Compacta espaçamentos de títulos
 
 % Pacotes de citações
 \usepackage[alf]{abntex2cite}	% Citações padrão ABNT NBR 10520 (Autor-data)
@@ -97,8 +98,8 @@ A motivação central deste estudo reside no mapeamento das perdas de desempenho
 
 Os resultados coletados ao longo das campanhas experimentais apoiam-se em três eixos analíticos principais:
 \begin{enumerate}
-    \item \textbf{Saturação Prematura de Paralelismo}: Testes de álgebra linear paralela demonstraram ganho de desempenho estatisticamente significativo ao escalar de 1 para 4 threads (reduzindo o tempo de execução de 0,9804s para 0,6242s, uma redução de 36,33\%). Contudo, ao expandir a carga de trabalho para 12 threads simultâneas (saturando todos os recursos lógicos da CPU híbrida), observou-se uma estagnação e até degradação marginal (média de 0,6414s). O teste t de Student bicaudal revelou um $p$-valor de $0,0663$, indicando que a diferença estatística entre usar 4 ou 12 threads é irrelevante a 95\% de confiança, o que comprova que o barramento de memória em canal simples impede o aproveitamento de núcleos lógicos adicionais.
-    \item \textbf{Efeito Severo de Localidade Espacial}: O percurso de matrizes bidimensionais de 128 MB que excedem amplamente as capacidades de cache SRAM locais revelou uma penalidade sistemática e estatisticamente significativa ($p$-valor $= 0,0281$) de $4,11\%$ de overhead de tempo no acesso orientado a colunas comparado ao acesso linear por linhas. Isso decorre de falhas sucessivas de cache (*cache misses*) e de tradução de endereços virtuais no TLB (*Translation Lookaside Buffer*).
+    \item \textbf{Saturação Prematura de Paralelismo}: Testes de álgebra linear paralela demonstraram ganho de desempenho estatisticamente significativo ao escalar de 1 para 4 threads (reduzindo o tempo de execução de 0,9804s para 0,6242s, uma redução de 36,33\%). Contudo, ao expandir a carga de trabalho para 12 threads simultâneas (saturando todos os recursos lógicos da CPU híbrida), observou-se uma estagnação e até degradação marginal (média de 0,6414s). O teste t de Student bicaudal revelou um p\text{-}valor de $0,0663$, indicando que a diferença estatística entre usar 4 ou 12 threads é irrelevante a 95\% de confiança, o que comprova que o barramento de memória em canal simples impede o aproveitamento de núcleos lógicos adicionais.
+    \item \textbf{Efeito Severo de Localidade Espacial}: O percurso de matrizes bidimensionais de 128 MB que excedem amplamente as capacidades de cache SRAM locais revelou uma penalidade sistemática e estatisticamente significativa (p\text{-}valor $= 0,0281$) de $4,11\%$ de overhead de tempo no acesso orientado a colunas comparado ao acesso linear por linhas. Isso decorre de falhas sucessivas de cache (*cache misses*) e de tradução de endereços virtuais no TLB (*Translation Lookaside Buffer*).
     \item \textbf{Overhead de Virtualização e Perda de Interface PCIe}: O subsistema de armazenamento baseado em disco rígido virtual (.vhdx) no WSL2 sofre flutuações crônicas nos tempos de transferência, registrando um elevado desvio-padrão de 91,23 MB/s na fase de gravação e leitura síncrona. Além disso, a auditoria de hardware indicou que o barramento físico do SSD NVMe da SK Hynix operava negociado sob link PCIe Gen 3x4 (vazão de 1,5 GB/s), apesar de a placa-mãe e a CPU suportarem PCIe Gen 4x4 (capacidade teórica de até 8 GB/s).
 \end{enumerate}
 
@@ -112,7 +113,7 @@ Diante deste diagnóstico, recomenda-se como decisão de engenharia de software 
 
 A evolução da engenharia de computadores tem sido guiada pela necessidade de conciliar a potência aritmética bruta com limitações físicas de dissipação térmica (*Thermal Design Power* - TDP) e consumo energético. Durante décadas, a indústria seguiu a Lei de Moore e o Escalonamento de Dennard para aumentar as frequências de clock de processadores de núcleo único. Com o esgotamento desse modelo devido à barreira térmica (*power wall*), a transição para sistemas multiprocessados (*multicore*) homogêneos consolidou-se como o paradigma padrão. Entretanto, mesmo a replicação de núcleos idênticos encontra barreiras físicas de comunicação de dados, conhecidas na literatura clássica como a barreira da memória ou *memory wall* \cite{mccalpin1995}.
 
-Recentemente, a indústria de semicondutores x86 adotou topologias de processamento híbrido ou heterogêneo. Este paradigma consiste na integração de núcleos otimizados para alto desempenho de execução em fluxo único (P-cores) com núcleos menores focados em rendimento multitarefa por unidade de área de silício e alta eficiência energética por watt consumido (E-cores). O processador Intel Core i5-13420H da microarquitetura Raptor Lake de 13ª geração materializa essa topologia, combinando 4 P-cores (capazes de processar 8 threads lógicas simultâneas através de *Hyper-Threading*) com 4 E-cores (estritamente monothread, totalizando 4 threads lógicas), oferecendo 12 unidades lógicas de processamento ao sistema operacional.
+Recently, a indústria de semicondutores x86 adotou topologias de processamento híbrido ou heterogêneo. Este paradigma consiste na integração de núcleos otimizados para alto desempenho de execução em fluxo único (P-cores) com núcleos menores focados em rendimento multitarefa por unidade de área de silício e alta eficiência energética por watt consumido (E-cores). O processador Intel Core i5-13420H da microarquitetura Raptor Lake de 13ª geração materializa essa topologia, combinando 4 P-cores (capazes de processar 8 threads lógicas simultâneas através de *Hyper-Threading*) com 4 E-cores (estritamente monothread, totalizando 4 threads lógicas), oferecendo 12 unidades lógicas de processamento ao sistema operacional.
 
 No contexto industrial de desenvolvimento de software moderno, a computação de alto desempenho (HPC) e a simulação de sistemas saíram das fronteiras exclusivas de supercomputadores e data centers corporativos, passando a fazer parte do fluxo de trabalho diário de engenheiros em suas estações de trabalho pessoais. O uso generalizado de contêineres Docker, microsserviços locais e ambientes de virtualização como o WSL2 permite que o engenheiro valide localmente arquiteturas complexas antes do deploy em nuvem. Contudo, essa facilidade oculta um custo computacional silencioso: a tradução dinâmica exercida por hipervisores de tipo 1 (como o Hyper-V que gerencia o WSL2) insere indireções no acesso aos componentes de hardware físicos, alterando a latência da hierarquia de caches, modificando a dinâmica de paginação de memória virtual e emulando o tratamento de interrupções físicas de dispositivos.
 
@@ -123,7 +124,9 @@ Neste cenário de hardware heterogêneo e software virtualizado, a dinâmica de 
     \item \textbf{Hipótese Alternativa ($H_1$)}: A largura de banda física sustentável da memória principal DRAM (limitada pelo canal simples DDR4) atua como um gargalo compartilhado insuperável (*memory wall*). Acima de um limite crítico de 4 threads paralelas (que saturam os P-cores físicos), o aumento na alocação de threads lógicas ativas induz contenda severa no barramento de controle de dados e perdas por assimetria dos E-cores, quebrando a escalabilidade linear e estabilizando ou degradando o tempo de execução.
 \end{itemize}
 
-A validação dessas hipóteses foi sustentada por um rigoroso protocolo de testes empíricos baseados em 35 repetições sistemáticas (das quais as 5 primeiras foram descartadas a título de *warm-up*), avaliações de intervalos de confiança (IC) a 95\% e testes paramétricos t de Student bicaudais com nível de significância de $\alpha = 0,05$. O restante deste relatório apresenta a fundamentação teórica, a metodologia detalhada de infraestrutura de hardware, os resultados e análises estatísticas e, por fim, as recomendações técnicas acionáveis baseadas nos dados coletados.
+A validação dessas hipóteses foi sustentada por um rigoroso protocolo de testes empíricos baseados em 35 repetições sistemáticas (das quais as 5 primeiras foram descartadas a título de *warm-up*), avaliações de intervalos de confiança (IC) a 95\% e testes paramétricos t de Student bicaudais com nível de significância de $\alpha = 0,05$. O tratamento estatístico utiliza o p\text{-}valor para fundamentar as rejeições ou aceitações de hipóteses de forma rigorosa (limiar de p\text{-}valor $< 0,05$).
+
+O restante deste relatório apresenta a fundamentação teórica, a metodologia detalhada de infraestrutura de hardware, os resultados e análises estatísticas e, por fim, as recomendações técnicas acionáveis baseadas nos dados coletados.
 
 % ---
 % CAPÍTULO 3: TRABALHOS RELACIONADOS
@@ -223,7 +226,7 @@ A arquitetura do processador e barramentos da máquina host física compreende:
     \item \textbf{Topologia de Cores}: 4 P-cores (8 threads lógicas via Hyper-Threading) operando com clock turbo máximo de 4,6 GHz, e 4 E-cores (4 threads lógicas) com clock turbo máximo de 3,4 GHz, expondo 12 threads lógicas.
     \item \textbf{Hierarquia de SRAM}: L1i de 288 KiB, L1d de 192 KiB, L2 de 7,5 MiB (soma agregada de 2 MiB por P-core e 2 MiB do cluster E-core), e L3 (LLC) de 12 MiB compartilhada via barramento em anel.
     \item \textbf{Memória RAM}: 8 GiB de RAM DDR4 (capacidade útil registrada de 7,6 GiB) operando em canal único (*single channel*) a 3200 MT/s.
-    \item \textbf{SSD NVMe Primário}: Unidade fabricada pela SK Hynix (Identificação ID PCI 1C5C:1D59), operando fisicamente sob barramento negociado no padrão PCIe Gen 3x4.
+    \item \textbf{SSD NVMe Primário}: Unidade fabricada pela SK Hynix (Identificação ID PCI 1C5C:1D59), operando fisicamente sob barramento negociado no padrão PCIe Gen 3x4 \cite{budruk2003}.
     \item \textbf{Placa Gráfica Dedicada}: Nvidia GeForce RTX 3050 Laptop GPU negociando sob link de barramento PCIe Gen 4x8 (Identificação ID PCI 10DE:28A1).
 \end{itemize}
 
@@ -247,7 +250,7 @@ A medição de tempos de processamento e taxas de transferência em computadores
         IC = \bar{X} \pm t_{\alpha/2, n-1} \cdot \left(\frac{SD}{\sqrt{n}}\right)
     \end{equation}
     Onde $\bar{X}$ é a média aritmética calculada, $SD$ representa o desvio-padrão amostral da amostra de $n = 30$ ensaios, e $t_{0,025, 29} \approx 2,0452$.
-    \item \textbf{Teste de Hipótese Paramétrico}: Aplicou-se o teste t de Student bicaudal para duas amostras independentes com variâncias populacionais desconhecidas. O limiar crítico para a rejeição da hipótese nula de igualdade de médias foi fixado em $\alpha = 0,05$ ($p$-valor $< 0,05$).
+    \item \textbf{Teste de Hipótese Paramétrico}: Aplicou-se o teste t de Student bicaudal para duas amostras independentes com variâncias populacionais desconhecidas. O limiar crítico para a rejeição da hipótese nula de igualdade de médias foi fixado em $\alpha = 0,05$ (p\text{-}valor $< 0,05$).
 \end{enumerate}
 
 \section{Procedimento dos Experimentos Python}
@@ -255,8 +258,8 @@ A medição de tempos de processamento e taxas de transferência em computadores
 
 Os três códigos-fonte executados para os testes de laboratório estão dispostos e limpos de comentários no repositório de dados:
 \begin{itemize}
-    \item \textbf{Teste de Paralelismo (\texttt{teste\_paralelismo.py})}: O script paraleliza 12 tarefas matriciais utilizando conjuntos aleatórios bidimensionais de double floats (\texttt{np.random.rand(1250, 1000)}), aplicando operações de multiplicação redundantes. O teste varia o tamanho do pool de processos para $N = \{1, 2, 4, 12\}$. O teste t de Student compara o cenário considerado como de melhor aproveitamento físico ($N = 4$ cores físicos de P-cores) com o cenário de saturação lógica total ($N = 12$ threads virtuais).
-    \item \textbf{Teste de Localidade de Referência (\texttt{teste\_localidade.py})}: Este script analisa os tempos necessários para varrer uma matriz bidimensional de 128 MB ($4000 \times 4000$ double floats). O loop percorre a matriz realizando acessos contíguos por linhas (formato padrão do numpy) e de forma não-contígua por colunas, efetuando o teste t de Student bicaudal entre os tempos dessas duas categorias de acesso.
+    \item \textbf{Teste de Paralelismo (\texttt{teste\_paralelismo.py})}: O script paraleliza 12 tarefas matriciais utilizando conjuntos aleatórios de double floats (\texttt{np.random.rand(1250, 1000)}), aplicando operações de multiplicação redundantes. O teste varia o tamanho do pool de processos para $N = \{1, 2, 4, 12\}$. O teste t de Student compara o cenário considerado como de melhor aproveitamento físico ($N = 4$ cores físicos de P-cores) com o cenário de saturação lógica total ($N = 12$ threads virtuais).
+    \item \textbf{Teste de Localidade de Referência (\texttt{teste\_localidade.py})}: Este script analisa os tempos necessários para varrer uma matriz de 128 MB ($4000 \times 4000$ double floats). O loop percorre a matriz realizando acessos contíguos por linhas (formato padrão do numpy) e de forma não-contígua por colunas, efetuando o teste t de Student bicaudal entre os tempos dessas duas categorias de acesso.
     \item \textbf{Carga Sintética Integrada (\texttt{workload\_completo.py})}: O script executa duas fases isoladas sequenciais: uma fase CPU-bound contendo cálculo vetorial aritmético intenso e uma fase Memory-bound executando cópias diretas em blocos de memória RAM que ultrapassam a cache L3 LLC.
 \end{itemize}
 
@@ -277,6 +280,8 @@ A Tabela~\ref{tab:dados_paralelismo} reúne os valores estatísticos calculados 
 \centering
 \caption{Tempos de execução sob escala de paralelismo ($N = 30$)}
 \label{tab:dados_paralelismo}
+\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{ccccc}
 \toprule
 \textbf{Threads/Processos} & \textbf{Média (s)} & \textbf{Desvio-Padrão (SD)} & \textbf{IC 95\% Inferior (s)} & \textbf{IC 95\% Superior (s)} \\
@@ -286,14 +291,15 @@ A Tabela~\ref{tab:dados_paralelismo} reúne os valores estatísticos calculados 
 4  & 0,6242 & 0,0313 & 0,6125 & 0,6359 \\
 12 & 0,6414 & 0,0393 & 0,6267 & 0,6561 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
-A variação temporal revela um decréscimo consistente no tempo de execução médio inicial: a alocação de 2 processos redundou em uma redução de tempo de $26,76\%$ em relação à execução uniprocesso. O escalonamento para 4 processos físicos paralelos (saturando todos os P-cores físicos do i5-13420H) reduziu a latência para 0,6242 segundos, alcançando uma economia agregada de tempo de $36,33\%$ comparada ao cenário uniprocesso.
+A variação temporal revela um decréscimo consistente no tempo de execução médio inicial: a alocação de 2 processos redundou em uma redução de tempo de $26,76\%$ em relação à execução uniprocesso. O escalonamento para 4 processos físicos paralelos (saturando todos os P-cores físicos do i5-13420H) reduziu a latência para 0,6242 segundos, alcançando uma economia de tempo de $36,33\%$ comparada ao cenário uniprocesso.
 
-No entanto, ao configurar o pool com 12 processos paralelos simultâneos, o desempenho médio degradou marginalmente, subindo para 0,6414 segundos (um incremento de $2,76\%$ no tempo de execução média). A variação do desvio-padrão também foi afetada, subindo de 0,0313 para 0,0393. O teste t de Student bicaudal aplicado para comparar as médias amostrais de $N=4$ e $N=12$ processos gerou um $p$-valor de $6,6300 \times 10^{-2}$ ($0,0663$).
+No entanto, ao configurar o pool com 12 processos paralelos simultâneos, o desempenho médio degradou marginalmente, subindo para 0,6414 segundos (um incremento de $2,76\%$ no tempo de execução médio). A variação do desvio-padrão também foi afetada, subindo de 0,0313 para 0,0393. O teste t de Student bicaudal aplicado para comparar as médias amostrais de $N=4$ e $N=12$ processos gerou um p\text{-}valor de $6,6300 \times 10^{-2}$ ($0,0663$).
 
-Como o $p$-valor $= 0,0663$ é superior ao limiar crítico $\alpha = 0,05$, falha-se em rejeitar a igualdade de médias entre as duas configurações de alta paralelização. A nível prático, este resultado indica que alocar 12 threads virtuais simultâneas não agrega benefício estatisticamente mensurável frente ao uso de 4 threads físicas otimizadas. Isso ocorre pela vigência da barreira física do barramento de DRAM (*memory wall*), onde a concorrência excessiva de 12 tarefas pelo barramento compartilhado DDR4 anula as vantagens aritméticas de hardware adicionais.
+Como o p\text{-}valor $= 0,0663$ é superior ao limiar crítico $\alpha = 0,05$, falha-se em rejeitar a igualdade de médias entre as duas configurações de alta paralelização. A nível prático, este resultado indica que alocar 12 threads virtuais simultâneas não agrega benefício estatisticamente mensurável frente ao uso de 4 threads físicas otimizadas. Isso ocorre pela vigência da barreira física do barramento de DRAM (*memory wall*), onde a concorrência excessiva de 12 tarefas pelo barramento compartilhado DDR4 anula as vantagens aritméticas de hardware adicionais.
 
 \section{Localidade Espacial de Referência nas Caches}
 \label{sec:resultados_localidade}
@@ -304,6 +310,8 @@ A Tabela~\ref{tab:dados_localidade} sumariza os dados temporais obtidos no teste
 \centering
 \caption{Tempos de acesso no teste de localidade de cache ($N = 30$)}
 \label{tab:dados_localidade}
+\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{ccccc}
 \toprule
 \textbf{Forma de Acesso} & \textbf{Média (s)} & \textbf{Desvio-Padrão (SD)} & \textbf{IC 95\% Inferior (s)} & \textbf{IC 95\% Superior (s)} \\
@@ -311,10 +319,11 @@ A Tabela~\ref{tab:dados_localidade} sumariza os dados temporais obtidos no teste
 Linhas (Sequencial)  & 2,9871 & 0,2391 & 2,8978 & 3,0764 \\
 Colunas (Saltos)     & 3,1098 & 0,1787 & 3,0431 & 3,1766 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
-A média temporal do acesso orientado a colunas superou em $4,11\%$ o tempo do percurso sequencial por linhas. O teste t de Student revelou um $p$-valor de $2,8098 \times 10^{-2}$ ($0,0281$). Sendo o $p$-valor inferior ao limiar crítico de $\alpha = 0,05$, confirma-se com significância formal a perda de desempenho ao percorrer a matriz saltando frames físicos de cache. O comportamento temporal detalhado de cada repetição revela que a perda sistemática é compensada dinamicamente pelas predições do *prefetcher* da Intel, mas a latência residual oriunda dos *page table walks* e das falhas no TLB descritas teoricamente persiste.
+A média temporal do acesso orientado a colunas superou em $4,11\%$ o tempo do percurso sequencial por linhas. O teste t de Student revelou um p\text{-}valor de $2,8098 \times 10^{-2}$ ($0,0281$). Sendo o p\text{-}valor inferior ao limiar crítico de $\alpha = 0,05$, confirma-se com significância formal a perda de desempenho ao percorrer a matriz saltando frames físicos de cache. O comportamento temporal detalhado de cada repetição revela que a perda sistemática é compensada dinamicamente pelas predições do *prefetcher* da Intel, mas a latência residual oriunda dos *page table walks* e das falhas no TLB descritas teoricamente persiste.
 
 \subsection{Frequência de Ocorrência e Distribuição Amostral}
 \label{subsec:frequencia}
@@ -325,6 +334,8 @@ Para reforçar a robustez da hipótese experimental e avaliar a normalidade das 
 \centering
 \caption{Frequência de ocorrência de tempos no teste de localidade de cache}
 \label{tab:frequencia_localidade}
+\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{ccc}
 \toprule
 \textbf{Intervalo de Tempo (s)} & \textbf{Frequência - Linhas} & \textbf{Frequência - Colunas} \\
@@ -336,7 +347,8 @@ $3,40 \le T < 3,70$ & 0  & 3  \\
 \midrule
 \textbf{Total Amostral} & \textbf{30} & \textbf{30} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 A distribuição amostral evidencia o deslocamento sistemático da curva de frequência do modo por Colunas para faixas de latência maiores: enquanto $83,3\%$ das rodadas do modo Linhas situam-se abaixo de 3,10 segundos, no modo Colunas essa proporção cai para $46,6\%$, reforçando de forma empírica a constatação estatística dos atrasos de busca induzidos na DRAM principal.
@@ -344,12 +356,14 @@ A distribuição amostral evidencia o deslocamento sistemático da curva de freq
 \section{Perfil de Desempenho do Workload Integrado}
 \label{sec:resultados_workload}
 
-A Tabela~\ref{tab:dados_workload} reúne os dados medidos nas fases aritméticas e de memória durante o teste de workload sintético executado consecutivamente.
+A Tabela~\ref{tab:dados_workload} apresenta as médias e métricas de desvio calculadas para as três fases operacionais consecutivas do script de workload integrado.
 
 \begin{table}[htb]
 \centering
 \caption{Resultados estatísticos das fases do workload integrado ($N = 30$)}
 \label{tab:dados_workload}
+\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{ccccc}
 \toprule
 \textbf{Fase Experimental} & \textbf{Média} & \textbf{Desvio-Padrão (SD)} & \textbf{IC 95\% Inferior} & \textbf{IC 95\% Superior} \\
@@ -358,14 +372,15 @@ CPU-Bound (Mop/s)      & 3.792,03 & 453,89 & 3.622,54 & 3.961,52 \\
 Memory-Bound (GB/s)    & 7,07     & 1,35   & 6,56     & 7,57     \\
 I/O-Bound (MB/s)       & 649,93   & 91,23  & 615,87   & 684,00   \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
-A fase CPU-bound registrou uma vazão média de 3.792,03 milhões de operações vetoriais por segundo (Mop/s). O desvio-padrão de 453,89 Mop/s reflete a flutuação dinâmica do jargão de escalonamento virtual sob concorrência do sistema hospedeiro. 
+Durante a fase CPU-bound, a plataforma registrou taxa média estável de 3.792,03 milhões de operações matemáticas por segundo (Mop/s). O desvio-padrão de 453,89 Mop/s reflete pequenas flutuações temporais inerentes ao escalonamento de processos no ambiente virtualizado.
 
-Na fase Memory-bound, a taxa de cópia de dados sustentada foi de 7,07 GB/s, valor alinhado com o barramento DRAM DDR4 de canal simples em tarefas que excedem a capacidade de caches de silício locais da CPU. 
+Na fase Memory-bound, a taxa de transferência registrada atingiu média de 7,07 GB/s. Este patamar operacional é consistente com o teto físico medido em canal simples DDR4.
 
-A fase I/O-bound exibiu taxa de 649,93 MB/s com desvio-padrão de 91,23 MB/s (coeficiente de variação de $14\%$), demonstrando a volatilidade induzida na emulação das interrupções virtuais paravirtualizadas sob a VM do WSL2.
+A fase de I/O-bound em disco NVMe virtualizado apresentou taxa média de 649,93 MB/s. Esta fase registrou desvio-padrão de 91,23 MB/s (coeficiente de variação de $14\%$), demonstrando a volatilidade associada à emulação das interrupções virtuais paravirtualizadas sob a VM do WSL2.
 
 % ---
 % CAPÍTULO 7: DISCUSSÃO E AMEAÇAS À VALIDADE
@@ -378,7 +393,7 @@ A fase I/O-bound exibiu taxa de 649,93 MB/s com desvio-padrão de 91,23 MB/s (co
 
 Os ensaios estatísticos revelam características microarquiteturais fundamentais sobre o processador Core i5-13420H e sua interface virtualizada. A ausência de ganho de desempenho significativo ao elevar a paralelização de 4 para 12 threads simultâneas reflete a saturação do barramento compartilhado DDR4 de canal simples. Quando a CPU opera com 4 processos de multiplicação de matrizes de alta intensidade vetorial, ela atinge o limite dinâmico de vazão entregue pelo controlador de memória física (imc). A alocação de 8 threads adicionais força a CPU a despender ciclos de clock significativos em estado ocioso (*stalled*), no qual as unidades aritméticas de execução dos P-cores e E-cores permanecem suspensas, aguardando que as requisições de leitura de matrizes na DRAM física sejam resolvidas.
 
-No teste de localidade de cache, o overhead de $4,11\%$ associado ao acesso por colunas corrobora a ocorrência sistemática de falhas de cache locais e falhas de tradução de endereçamento virtual no TLB. O percurso por colunas com grandes saltos de memória desalinha as predições contíguas de endereços, forçando a MMU da CPU a executar sucessivas buscas complexas na DRAM física para decodificar as tabelas de páginas lógicas. Esse comportamento é atenuado pelas otimizações do pré-buscador físico de silício do i5-13420H, mas sua assinatura temporal e jactância permanecem mensuráveis estatisticamente.
+No teste de localidade de cache, o overhead de $4,11\%$ associado ao acesso por colunas corrobora a ocorrência sistemática de falhas de cache locais e falhas de tradução de endereçamento virtual no TLB. O percurso por colunas com grandes saltos de memória desalinha as predições contíguas de endereços, forçando a MMU da CPU a executar sucessivas buscas complexas na DRAM física para decodificar as tabelas de páginas lógicas. Esse comportamento é atenuada pelas otimizações do pré-buscador físico de silício do i5-13420H, mas sua assinatura temporal e jactância permanecem mensuráveis estatisticamente.
 
 \section{Ameaças à Validade do Estudo}
 \label{sec:ameacas_validade}
@@ -397,7 +412,7 @@ A variação de desempenho observada nas amostras experimentais sofre influênci
 
 Ao aproximar-se do limiar de segurança térmica, a CPU ativa algoritmos de escalonamento térmico dinâmico (*Thermal Throttling*), reduzindo a frequência de clock e a tensão operacional para arrefecer o silício. Somado a isso, o processador opera sob os limites de energia PL1 (*Power Limit 1* - sustentado de 45W) e PL2 (*Power Limit 2* - pico temporário de 95W). 
 
-Ao início de uma bateria de ensaios, a CPU executa sob o patamar PL2 de alta frequência. Após um intervalo temporal parametrizado no firmware (janela *tau*, tipicamente 28 segundos), a malha de controle física força o recuo da CPU para o nível estável PL1 de frequência de clock reduzida. Essa transição de consumo térmico durante o andamento dos 30 testes válidos aumenta artificialmente a variação de latência e o desvio-padrão das amostras temporais.
+Ao início de uma bateria de ensaios, a CPU executa sob o patamar PL2 de alta frequência. Após um intervalo temporal parametrizado no firmware (janela *tau*, tipicamente 28 segundos), a malha de controle física força o recuo da CPU para o nível estável PL1 de frequência de clock reduzida. Essa transição de consumo térmico durante o andamento dos 30 testes válidos aumenta a variação de latência e o desvio-padrão das amostras temporais.
 
 \section{Impacto dos Estados C (C-States) de Economia de Energia}
 \label{sec:estados_c}
@@ -432,7 +447,7 @@ Baseado na caracterização física da CPU Intel Core i5-13420H virtualizada via
 
 Este relatório técnico realizou a caracterização física e de software da plataforma de hardware heterogênea baseada na CPU Intel Core i5-13420H sob virtualização WSL2 do Windows 11. Empregando um protocolo experimental estatístico contendo 35 rodadas (com descarte de 5 execuções de *warm-up*), intervalos de confiança a 95\% e testes paramétricos t de Student bicaudais, avaliaram-se a escalabilidade e os limites de paralelismo, as penalidades microarquiteturais de localidade de cache e TLB, e as flutuações associadas ao tratamento virtualizado de interrupções de I/O em disco.
 
-Os testes de paralelismo comprovaram a rejeição estatística da suposição de aceleração paralela linear, comprovando a validade da hipótese alternativa. O barramento físico DDR4 de canal único atua como o principal gargalo de hardware (*memory wall*), limitando a velocidade de transferência a aproximadamente 7,07 GB/s sob testes estáveis e inviabilizando melhorias temporais estatisticamente perceptíveis ($p$-valor $= 0,0663$) ao expandir o pool para 12 threads lógicas de execução. A análise de cache e TLB registrou overhead sistemático no modo por colunas ($p$-valor $= 2,8098 \times 10^{-2}$), evidenciando o custo de *page table walks* sucessivos na MMU física. Nas avaliações de I/O, as taxas temporais sofreram variações expressivas decorrentes do chaveamento dinâmico entre VM-exits e entradas gerados via sinais do hipervisor Hyper-V.
+Os testes de paralelismo comprovaram a rejeição estatística da suposição de aceleração paralela linear, comprovando a validade da hipótese alternativa. O barramento físico DDR4 de canal único atua como o principal gargalo de hardware (*memory wall*), limitando a velocidade de transferência a aproximadamente 7,07 GB/s sob testes estáveis e inviabilizando melhorias temporais estatisticamente perceptíveis (p\text{-}valor $= 0,0663$) ao expandir o pool para 12 threads lógicas de execução. A análise de cache e TLB registrou overhead sistemático no modo por colunas (p\text{-}valor $= 2,8098 \times 10^{-2}$), evidenciando o custo de *page table walks* sucessivos na MMU física. Nas avaliações de I/O, as taxas temporais sofreram variações expressivas decorrentes do chaveamento dinâmico entre VM-exits e entradas gerados via sinais do hipervisor Hyper-V.
 
 Como propostas para investigações futuras, sugere-se a aplicação deste mesmo protocolo em uma instalação física nativa (*bare metal*) do Linux em dual-boot. Esse procedimento permitirá separar por comparação direta as penalidades dinâmicas exclusivas da virtualização e Hyper-V daquelas inerentes às restrições físicas de arquitetura heterogênea e controle térmico do i5-13420H.
 
