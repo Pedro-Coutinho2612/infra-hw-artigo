@@ -1,6 +1,2 @@
-=== Teste de localidade espacial ===
-Matriz: 4000 x 4000 (float64)
-
-Loop A (linha por linha, sequencial): 4.54 s
-Loop B (coluna por coluna, com saltos): 5.17 s
-Razao B/A: 1.14x
+Linhas IC 95%: (2.897787664790248, 3.0763509892764533) | Colunas IC 95%: (3.0430909861966176, 3.176559858403395)
+p-valor: 2.8098e-02

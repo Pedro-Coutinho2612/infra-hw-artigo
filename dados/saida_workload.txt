@@ -1,9 +1,2 @@
-=== Workload integrado ===
-
-[cpu]  89111.3 Mop/s
-[mem]  4.29 GB/s
-[i/o]  1192.1 MB/s
-
-Nucleos acima de 50%: 0 de 12
-
-Gargalo detectado: memory-bound
+CPU: Média: 3792.03 | IC 95%: (3622.5365473627357, 3961.524029681678)
+MEM: Média: 7.07 | IC 95%: (6.561222882822028, 7.5699821585187035)

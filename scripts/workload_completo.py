@@ -1,55 +1,17 @@
-import time
-import os
-import tempfile
-import numpy as np
-import psutil
-
-# --- fase cpu-bound: array pequeno que cabe na cache, muitas passadas ---
-v = np.random.rand(250_000).astype(np.float32)  # ~1 MB, cabe na L2
-PASSADAS = 2000
-inicio = time.perf_counter()
-for _ in range(PASSADAS):
-    r = v * np.float32(1.0001) + np.float32(0.5)
-tempo_cpu = time.perf_counter() - inicio
-mops = (len(v) * 2 * PASSADAS) / tempo_cpu / 1e6
-print(f"[cpu]  {tempo_cpu:.3f} s  ->  {mops:.1f} Mop/s")
-
-# --- fase memory-bound: copia de array grande ---
-tamanho = 256 * 1024 * 1024
-a = np.ones(tamanho // 8, dtype=np.float64)
-b = np.empty_like(a)
-
-inicio = time.perf_counter()
-np.copyto(b, a)
-tempo_mem = time.perf_counter() - inicio
-gb_s = (tamanho * 2) / tempo_mem / 1e9
-print(f"[mem]  {tempo_mem:.3f} s  ->  {gb_s:.2f} GB/s")
-
-# uso de cpu logo apos a fase de memoria
-uso = psutil.cpu_percent(interval=0.5, percpu=True)
-ocupados = sum(1 for u in uso if u > 50)
-print(f"nucleos acima de 50% apos fase de memoria: {ocupados}")
-
-# --- fase i/o-bound: escrita e leitura em disco ---
-tamanho_io = 128 * 1024 * 1024
-dados = os.urandom(tamanho_io)
-
-fd, caminho = tempfile.mkstemp(suffix=".bin")
-os.close(fd)
-
-inicio = time.perf_counter()
-with open(caminho, "wb") as f:
-    f.write(dados)
-    f.flush()
-    os.fsync(f.fileno())
-with open(caminho, "rb") as f:
-    f.read()
-tempo_io = time.perf_counter() - inicio
-os.remove(caminho)
-
-mb_s = (tamanho_io * 2) / tempo_io / 1e6
-print(f"[i/o]  {tempo_io:.3f} s  ->  {mb_s:.1f} MB/s")
-
-# a banda de memoria fica no teto da ddr4 enquanto a cpu nao satura
-# durante a copia: comportamento de sistema memory-bound
-print(f"\nbanda de memoria medida: {gb_s:.2f} GB/s")
+import time, os, tempfile, numpy as np, scipy.stats as stats
+REPETICOES, WARMUP = 35, 5
+mops_l, gbs_l, mbs_l = [], [], []
+for r in range(REPETICOES):
+    v = np.random.rand(250_000).astype(np.float32)
+    t0 = time.perf_counter()
+    for _ in range(2000): v * 1.0001 + 0.5
+    mops = (len(v) * 2 * 2000) / (time.perf_counter() - t0) / 1e6
+    tam = 256 * 1024 * 1024; a = np.ones(tam // 8); b = np.empty_like(a)
+    t0 = time.perf_counter()
+    np.copyto(b, a)
+    gb_s = (tam * 2) / (time.perf_counter() - t0) / 1e9
+    if r >= WARMUP: mops_l.append(mops); gbs_l.append(gb_s)
+def rep(nome, dados):
+    ic = stats.t.interval(0.95, len(dados)-1, loc=np.mean(dados), scale=stats.sem(dados))
+    print(f"{nome}: Média: {np.mean(dados):.2f} | IC 95%: {ic}")
+rep("CPU", mops_l); rep("MEM", gbs_l)
