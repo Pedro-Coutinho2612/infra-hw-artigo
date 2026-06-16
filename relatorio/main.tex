@@ -1,0 +1,398 @@
+\documentclass[
+	12pt,
+	openright,
+	oneside,
+	a4paper,
+	english,
+	brazil
+	]{abntex2}
+
+% ---
+% Pacotes básicos
+% ---
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lastpage}
+\usepackage{indentfirst}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{url}
+\usepackage{setspace}
+\usepackage[compact]{titlesec}
+
+% Redução de espaços verticais entre títulos (compactar sem perder ABNT)
+\titlespacing*{\chapter}{0pt}{6pt}{6pt}
+\titlespacing*{\section}{0pt}{4pt}{4pt}
+\titlespacing*{\subsection}{0pt}{3pt}{3pt}
+
+% Pacote de citações ABNT
+\usepackage[alf]{abntex2cite}
+
+% ---
+% Dados da capa e folha de rosto
+% ---
+\titulo{Relatório Técnico Expandido (Trilha B): Análise Experimental e Estatística da Hierarquia de Memória, Subsistemas de I/O e Paralelismo em Processador Híbrido Intel Core i5-13420H}
+\autor{Pedro Coutinho da Silva}
+\local{Recife, PE}
+\data{2026}
+\instituicao{%
+  CESAR School
+  \par
+  Curso de Engenharia de Computação
+  \par
+  Disciplina de Infraestrutura de Hardware}
+\orientador{Prof. Ronierison Maciel}
+\tipotrabalho{Relatório Técnico}
+
+
+% Cor azul para links
+\definecolor{blue}{RGB}{41,128,185}
+
+\hypersetup{
+	pdftitle={\imprimirtitulo},
+	pdfauthor={\imprimirautor},
+	pdfsubject={\imprimirpreambulo},
+	pdfcreator={LaTeX with abntex2},
+	colorlinks=true,
+	linkcolor=blue,
+	citecolor=blue,
+	filecolor=magenta,
+	urlcolor=blue,
+	bookmarksdepth=4
+}
+
+\setlength{\parindent}{1.3cm}
+\setlength{\parskip}{0.1cm}
+
+% ---
+\begin{document}
+
+\selectlanguage{brazil}
+\frenchspacing
+\onehalfspacing
+
+% ----------------------------------------------------------
+% ELEMENTOS PRÉ-TEXTUAIS
+% ----------------------------------------------------------
+\imprimirfolhaderosto
+
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+% ----------------------------------------------------------
+% ELEMENTOS TEXTUAIS
+% ----------------------------------------------------------
+\textual
+
+% ============================================================
+\chapter{Sumário Executivo}
+\label{chap:sumario_executivo}
+% ============================================================
+
+Este relatório apresenta uma investigação técnica empírica e estatisticamente fundamentada sobre o comportamento microarquitetural do processador heterogêneo Intel Core i5-13420H (Raptor Lake, 13ª geração) em um ambiente Ubuntu 24.04.3 LTS virtualizado via WSL2 sobre Windows 11/Hyper-V. A motivação central reside no mapeamento das perdas de desempenho que afetam tarefas de engenharia de software em ambientes virtuais de desenvolvimento pessoal com arquiteturas híbridas P-core/E-core.
+
+Os resultados obtidos em 30 amostras válidas (após 5 repetições de \textit{warm-up}) apoiam-se em três eixos analíticos:
+
+\begin{enumerate}
+    \item \textbf{Saturação de Paralelismo}: Escalar de 1 para 4 threads reduziu o tempo de execução de 0,9804\,s para 0,6242\,s ($-36{,}33\%$). Ao saturar com 12 threads, o tempo estabilizou em 0,6414\,s, sem melhoria significativa (p\text{-}valor $= 0{,}0663 > 0{,}05$), evidenciando a barreira do barramento DDR4 em provável configuração de canal simples.
+
+    \item \textbf{Localidade Espacial}: O percurso por colunas em uma matriz de 128\,MB gerou overhead de $4{,}11\%$ sobre o percurso por linhas (p\text{-}valor $= 0{,}0281 < 0{,}05$), confirmando penalidade sistemática associada à degradação de \textit{prefetch} e de localidade de \textit{cache}/TLB.
+
+    \item \textbf{Overhead de Virtualização}: O subsistema de I/O em disco virtual (.vhdx) registrou desvio-padrão de 91,23\,MB/s nas taxas de transferência, evidenciando flutuações crônicas decorrentes de interrupções paravirtualizadas via VMBus/Hyper-V. Adicionalmente, o SSD NVMe opera em PCIe Gen~3x4 em vez do Gen~4x4 suportado pelo hardware.
+\end{enumerate}
+
+Recomenda-se limitar aplicações matriciais a no máximo 4 threads e evitar o WSL2 para cargas de alta transatividade de I/O.
+
+% ============================================================
+\chapter{Introdução}
+\label{chap:introducao}
+% ============================================================
+
+A evolução da engenharia de computadores conciliou potência aritmética com limitações de dissipação térmica. Após o esgotamento do escalonamento de Dennard, a transição para sistemas \textit{multicore} consolidou-se, mas encontrou a barreira da memória (\textit{memory wall}) \cite{mccalpin1995} — conceitos fundamentados em \citeonline{patterson2021} e \citeonline{hennessy2017}. Recentemente, a Intel adotou topologias híbridas, integrando P-cores de alto desempenho (Golden Cove, com Hyper-Threading) e E-cores de eficiência energética (Gracemont) no mesmo \textit{die}. O i5-13420H materializa esse paradigma com 4 P-cores (8 threads lógicas) e 4 E-cores (4 threads lógicas), totalizando 12 unidades lógicas de processamento.
+
+No contexto de desenvolvimento moderno, ambientes como WSL2 ocultam um custo computacional silencioso: o hipervisor Hyper-V insere indireções no acesso ao hardware físico, alterando a dinâmica de caches, paginação e tratamento de interrupções. Nesse cenário, a aceleração paralela linear prevista pela Lei de Amdahl \cite{amdahl1967} afasta-se da realidade observada.
+
+Este relatório testa formalmente as seguintes hipóteses:
+
+\begin{itemize}
+    \item \textbf{$H_0$}: O tempo de execução reduz-se linearmente com o número de threads ($T(N) \propto T(1)/N$), sem limitação por saturação do barramento DRAM.
+    \item \textbf{$H_1$}: A largura de banda DDR4 em canal simples atua como gargalo compartilhado insuperável. Acima de 4 threads (P-cores físicos), a alocação de threads adicionais não produz ganho temporal estatisticamente significativo.
+\end{itemize}
+
+A validação baseia-se em 30 amostras válidas, intervalos de confiança (IC) a 95\% e testes t de Student bicaudais ($\alpha = 0{,}05$).
+
+% ============================================================
+\chapter{Fundamentação Teórica e Trabalhos Relacionados}
+\label{chap:fundamentacao}
+% ============================================================
+
+\section{Contexto Bibliográfico}
+\label{sec:trabalhos_relacionados}
+
+A disparidade entre velocidade da CPU e taxa de transferência da DRAM foi descrita seminalmente por \citeonline{mccalpin1995} via suíte STREAM, demonstrando saturação assintótica da largura de banda após poucas unidades paralelas. \citeonline{mcvoy1996} propuseram o LMbench para mapear latências ao longo da hierarquia de memória. O modelo Roofline de \citeonline{williams2009} classifica aplicações como \textit{compute-bound} ou \textit{memory-bound} com base na intensidade aritmética (FLOP/byte).
+
+A literatura de arquiteturas \textit{multicore} estabelece que a largura de banda de memória compartilhada se torna o fator limitante do escalonamento à medida que o número de núcleos ativos cresce. \citeonline{rogers2009bandwidth} formalizaram o problema da \textit{bandwidth wall}, mostrando que a banda disponível por núcleo decresce conforme se multiplicam as unidades de processamento em um mesmo \textit{die}. \citeonline{diamond2011evaluation} demonstraram experimentalmente que, uma vez saturado o subsistema de memória, o padrão e a ordem dos acessos passam a determinar o desempenho, e que métricas tradicionais de núcleo único podem ser enganosas no regime \textit{multicore}. No domínio das arquiteturas híbridas, a documentação técnica da Intel \cite{intel2021hybrid} descreve a coexistência de P-cores e E-cores e os mecanismos de escalonamento associados, contexto em que a contenção pelo canal de memória compartilhado tende a anular ganhos esperados do paralelismo em \textit{workloads} intensivos em memória. A teoria de paginação e alocação tardia é fundamentada em \citeonline{tanenbaum2015} e \citeonline{love2010linux}.
+
+\section{Arquitetura Híbrida Intel Raptor Lake}
+\label{sec:raptor_lake}
+
+A microarquitetura Raptor Lake \cite{intel2021hybrid,intel2022raptorlake} integra dois tipos de núcleos:
+
+\textbf{P-cores (Golden Cove)}: Decodificador de 6 instruções/ciclo, ROB de 512 entradas, 12 portas de execução, Hyper-Threading (SMT 2-vias) e pipeline de 13 estágios. Otimizados para minimizar latência instrução por instrução.
+
+\textbf{E-cores (Gracemont)}: ROB de 256 entradas, sem Hyper-Threading, menor suporte vetorial. Grupos de 4 E-cores compartilham 2\,MiB de cache L2. Maximizam rendimento por watt e por área de silício.
+
+O \textit{Intel Thread Director} \cite{intel2022threaddir} monitora classes de instruções por thread e sinaliza ao escalonador do SO a migração de tarefas vetoriais intensas para P-cores. No WSL2, a VM Linux depende de sinais retransmitidos pelo Hyper-V, introduzindo atraso residual nessas migrações.
+
+\section{Hierarquia de Memória, Paginação e TLB}
+\label{sec:memoria_tlb}
+
+No i5-13420H, cada P-core possui L1d de 48\,KiB e L2 privado de 2\,MiB; os E-cores compartilham 2\,MiB de L2 por \textit{cluster}; o LLC (L3) é de 12\,MiB compartilhado. O controlador de memória integrado (IMC), em provável configuração de canal simples DDR4 estimada em 3200\,MT/s conforme a especificação da plataforma, limita a taxa teórica agregada a $\approx 25{,}6$\,GB/s, compartilhada entre todos os 12 threads.
+
+O kernel do Linux utiliza paginação de quatro níveis (PML4 $\to$ PDPT $\to$ PD $\to$ PT) com alocação tardia (\textit{lazy allocation}): frames físicos são alocados apenas na ocorrência de \textit{page fault}. O TLB armazena traduções recentes em silício; percursos por colunas com saltos maiores que 32\,KiB tendem a reduzir o reaproveitamento de traduções e a eficácia do \textit{prefetcher}, adicionando latência mensurável.
+
+\section{Interrupções Virtualizadas no WSL2}
+\label{sec:interrupcoes}
+
+Em hardware nativo, dispositivos emitem sinais MSI/MSI-X diretamente ao APIC. No WSL2, toda comunicação de I/O é mediada pelo VMBus: a requisição gera um \textit{VM-exit}, o Hyper-V processa a operação no arquivo \texttt{.vhdx} físico, recebe a interrupção real do SSD e retorna via \textit{hypervisor callback} (\textit{VM-enter}). Essa cadeia insere latência e flutuação crônicas no subsistema de disco virtual.
+
+% ============================================================
+\chapter{Metodologia}
+\label{chap:metodologia}
+% ============================================================
+
+\section{Ambiente Experimental}
+\label{sec:ambiente}
+
+\textbf{Hardware (host físico)}:
+\begin{itemize}
+    \item Processador: Intel Core i5-13420H — 4 P-cores (8 threads, turbo 4,6\,GHz) + 4 E-cores (4 threads, turbo 3,4\,GHz) = 12 threads lógicas.
+    \item Cache: L1i 288\,KiB | L1d 192\,KiB | L2 7,5\,MiB | L3 12\,MiB (LLC compartilhada).
+    \item RAM: 8\,GiB DDR4 instalados (7,6\,GiB úteis ao sistema), em provável configuração de canal simples estimada em 3200\,MT/s conforme especificação da plataforma.
+    \item SSD NVMe: SK Hynix (PCI 1C5C:1D59), link negociado em PCIe Gen~3x4 \cite{budruk2003}.
+    \item GPU: Nvidia RTX 3050 Laptop (PCI 10DE:28A1), link PCIe Gen~4x8.
+\end{itemize}
+
+\textbf{Software (ambiente guest)}:
+\begin{itemize}
+    \item Host: Windows 11 Home (64 bits) com Hyper-V.
+    \item Guest: Ubuntu 24.04.3 LTS via WSL2, kernel 6.6.87.2-microsoft-standard-WSL2.
+    \item Linguagem: Python 3.12.3 com NumPy 1.26.4 e SciPy 1.11.4.
+\end{itemize}
+
+\section{Protocolo Estatístico}
+\label{sec:protocolo}
+
+Para isolar o comportamento do hardware frente ao ruído do SO hospedeiro, adotou-se:
+
+\begin{enumerate}
+    \item \textbf{\textit{Warm-up}}: 35 repetições por teste; as 5 primeiras descartadas para estabilizar caches e forçar saída de C-states profundos.
+    \item \textbf{Amostra}: $N = 30$ repetições válidas e consecutivas.
+    \item \textbf{IC a 95\%}: $IC = \bar{X} \pm t_{0{,}025,\,29} \cdot (SD/\sqrt{n})$, com $t_{0{,}025,\,29} \approx 2{,}0452$.
+    \item \textbf{Teste de hipótese}: Teste t de Student bicaudal para duas amostras independentes; limiar $\alpha = 0{,}05$.
+\end{enumerate}
+
+\section{Scripts de Teste}
+\label{sec:scripts}
+
+\begin{itemize}
+    \item \textbf{\texttt{teste\_paralelismo.py}}: Paraleliza 12 tarefas matriciais (\texttt{np.random.rand(1250, 1000)}) variando o pool em $N \in \{1, 2, 4, 12\}$ processos. Compara estatisticamente $N=4$ vs.\ $N=12$.
+    \item \textbf{\texttt{teste\_localidade.py}}: Percorre uma matriz de 128\,MB ($4000 \times 4000$ \textit{double floats}) por linhas (contíguo) e por colunas (saltos). Aplica teste t entre os dois modos.
+    \item \textbf{\texttt{workload\_completo.py}}: Executa sequencialmente uma fase CPU-bound (cálculo vetorial intenso) e uma fase Memory-bound (cópias de blocos acima do LLC de 12\,MiB), seguida de fase I/O-bound em disco virtual.
+\end{itemize}
+
+% ============================================================
+\chapter{Resultados e Análise}
+\label{chap:resultados}
+% ============================================================
+
+\section{Escalabilidade de Paralelismo}
+\label{sec:resultados_paralelismo}
+
+A Tabela~\ref{tab:dados_paralelismo} apresenta os tempos de execução medidos para as quatro configurações de paralelismo.
+
+\begin{table}[htb]
+\centering
+\caption{Tempos de execução sob escala de paralelismo ($N = 30$)}
+\label{tab:dados_paralelismo}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Threads/Processos} & \textbf{Média (s)} & \textbf{Desvio-Padrão (SD)} & \textbf{IC 95\% Inferior (s)} & \textbf{IC 95\% Superior (s)} \\
+\midrule
+1  & 0,9804 & 0,0837 & 0,9492 & 1,0117 \\
+2  & 0,7180 & 0,0462 & 0,7007 & 0,7353 \\
+4  & 0,6242 & 0,0313 & 0,6125 & 0,6359 \\
+12 & 0,6414 & 0,0393 & 0,6267 & 0,6561 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+O decréscimo de tempo é consistente de 1 para 4 threads: a redução de 36,33\% confirma o ganho real ao saturar os P-cores físicos. Porém, ao expandir para 12 processos, o tempo médio subiu marginalmente para 0,6414\,s ($+2{,}76\%$) e o desvio-padrão aumentou de 0,0313 para 0,0393, indicando maior instabilidade. O teste t bicaudal entre $N=4$ e $N=12$ gerou p\text{-}valor $= 0{,}0663$. Como $0{,}0663 > \alpha = 0{,}05$, \textbf{falha-se em rejeitar $H_0$} de igualdade de médias: a diferença não é estatisticamente significativa. Isso comprova que o barramento DDR4 em canal simples atinge saturação com 4 threads, tornando a alocação de threads adicionais ineficaz.
+
+\section{Localidade Espacial de Referência}
+\label{sec:resultados_localidade}
+
+A Tabela~\ref{tab:dados_localidade} reúne os dados do teste de percurso matricial.
+
+\begin{table}[htb]
+\centering
+\caption{Tempos de acesso no teste de localidade de cache ($N = 30$)}
+\label{tab:dados_localidade}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Forma de Acesso} & \textbf{Média (s)} & \textbf{Desvio-Padrão (SD)} & \textbf{IC 95\% Inferior (s)} & \textbf{IC 95\% Superior (s)} \\
+\midrule
+Linhas (Sequencial)  & 2,9871 & 0,2391 & 2,8978 & 3,0764 \\
+Colunas (Saltos)     & 3,1098 & 0,1787 & 3,0431 & 3,1766 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+O acesso por colunas superou em $4{,}11\%$ o percurso por linhas. O teste t bicaudal revelou p\text{-}valor $= 0{,}0281 < 0{,}05$, confirmando com significância formal a existência de uma penalidade sistemática associada ao padrão de acesso não-contíguo. Cabe ressaltar que, por percorrer a matriz elemento a elemento em laços Python, o custo dominante de ambos os percursos é o \textit{overhead} do interpretador; ainda assim, o efeito de localidade sobrevive estatisticamente a esse ruído. A Tabela~\ref{tab:frequencia_localidade} detalha a distribuição amostral desse efeito.
+
+\begin{table}[htb]
+\centering
+\caption{Distribuição de frequência dos tempos no teste de localidade}
+\label{tab:frequencia_localidade}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ccc}
+\toprule
+\textbf{Intervalo (s)} & \textbf{Freq.\ Linhas} & \textbf{Freq.\ Colunas} \\
+\midrule
+$2{,}50 \le T < 2{,}80$ & 5  & 0  \\
+$2{,}80 \le T < 3{,}10$ & 20 & 14 \\
+$3{,}10 \le T < 3{,}40$ & 5  & 13 \\
+$3{,}40 \le T < 3{,}70$ & 0  & 3  \\
+\midrule
+\textbf{Total} & \textbf{30} & \textbf{30} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Enquanto $83{,}3\%$ das rodadas por linhas ficaram abaixo de 3,10\,s, no modo colunas essa proporção cai para $46{,}6\%$, evidenciando o deslocamento sistemático da distribuição para faixas de latência maiores.
+
+\section{Workload Integrado (CPU, Memória e I/O)}
+\label{sec:resultados_workload}
+
+A Tabela~\ref{tab:dados_workload} sintetiza os resultados das três fases do script integrado.
+
+\begin{table}[htb]
+\centering
+\caption{Resultados estatísticos das fases do workload integrado ($N = 30$)}
+\label{tab:dados_workload}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Fase} & \textbf{Média} & \textbf{Desvio-Padrão} & \textbf{IC 95\% Inf.} & \textbf{IC 95\% Sup.} \\
+\midrule
+CPU-Bound (Mop/s)   & 3.792,03 & 453,89 & 3.622,54 & 3.961,52 \\
+Memory-Bound (GB/s) & 7,07     & 1,35   & 6,56     & 7,57     \\
+I/O-Bound (MB/s)    & 649,93   & 91,23  & 615,87   & 684,00   \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Na fase CPU-bound, a taxa de 3.792,03\,Mop/s com desvio de 453,89\,Mop/s reflete o escalonamento dinâmico em ambiente virtualizado. A fase Memory-bound atingiu 7,07\,GB/s; esse valor corresponde à banda sustentada por uma única \textit{stream} de cópia sequencial (a operação \texttt{np.copyto} executa em uma única thread), e não à saturação agregada do canal. O teto teórico agregado do canal simples DDR4 ($\approx 25{,}6$\,GB/s) só seria aproximado com múltiplos fluxos concorrentes; a banda de 7,07\,GB/s de um único fluxo é, portanto, coerente com o regime \textit{memory-bound} observado. A fase I/O-bound apresentou o maior coeficiente de variação ($14\%$), com desvio de 91,23\,MB/s, diretamente associado à cadeia \textit{VM-exit}/Hyper-V/\textit{VM-enter} nas interrupções virtualizadas do subsistema de disco \texttt{.vhdx}.
+
+% ============================================================
+\chapter{Discussão, Ameaças à Validade e Recomendações}
+\label{chap:discussao}
+% ============================================================
+
+\section{Análise Crítica dos Gargalos}
+\label{sec:analise_critica}
+
+Os ensaios comprovam que o i5-13420H, neste ambiente, é predominantemente \textit{memory-bound}. Com 4 processos matriciais paralelos, o IMC atinge o limite dinâmico de vazão DDR4. Alocar 8 threads adicionais mantém as unidades aritméticas em estado ocioso (\textit{stalled}), aguardando resolução de leituras na DRAM física — fenômeno previsto pelo modelo Roofline \cite{williams2009} e consistente com a contenção de banda compartilhada descrita em \citeonline{rogers2009bandwidth} e \citeonline{diamond2011evaluation}. O overhead de $4{,}11\%$ no percurso por colunas decorre da degradação das predições do \textit{prefetcher} e da menor localidade de \textit{cache}/TLB no acesso não-contíguo; \textit{page table walks} adicionais na DRAM constituem um dos fatores plausíveis, ainda que o efeito esteja parcialmente atenuado pelo pré-buscador do i5-13420H e mascarado pelo \textit{overhead} do interpretador. A assinatura temporal, contudo, permanece estatisticamente mensurável.
+
+\section{Ameaças à Validade}
+\label{sec:ameacas}
+
+\begin{enumerate}
+    \item \textbf{Carga de plano de fundo do Windows 11}: Antivírus em tempo real, atualizações e renderização da GPU concorrem pelo barramento DRAM, ampliando o desvio-padrão amostral.
+    \item \textbf{Overhead WSL2/Hyper-V}: A emulação de interrupções via VMBus insere variações crônicas, justificando o desvio de 91,23\,MB/s na fase I/O.
+    \item \textbf{Escalonamento híbrido e térmico}: Sem acesso direto ao \textit{Intel Thread Director}, o escalonador Linux convidado pode desviar tarefas vetoriais para E-cores. Adicionalmente, o \textit{Thermal Throttling} (limites PL1 de 45\,W e PL2 de 95\,W por $\approx$28\,s) reduz a frequência de clock durante baterias longas, aumentando a dispersão amostral. O protocolo de \textit{warm-up} mitigou os efeitos de C-states, mas não elimina a variabilidade térmica.
+\end{enumerate}
+
+\section{Recomendações Técnicas}
+\label{sec:recomendacoes}
+
+\begin{enumerate}
+    \item \textbf{Limitar pools matriciais a 4 threads}: O canal DDR4 simples satura com 4 processos. Threads adicionais geram ociosidade forçada de CPU sem ganho mensurável.
+    \item \textbf{Evitar WSL2 para I/O de alta transatividade}: Bancos de dados e workloads intensivos em disco devem rodar em instalação nativa (Windows NT ou Linux \textit{bare metal}), eliminando a cadeia \textit{VM-exit}/\textit{VM-enter}.
+    \item \textbf{Fixar afinidade nos P-cores}: Verificar o mapeamento real dos núcleos com \texttt{lscpu -e} antes de usar \texttt{sched\_setaffinity}; em seguida, travar threads críticas nos índices lógicos correspondentes aos P-cores, impedindo desvio para os E-cores de menor desempenho vetorial. Note-se que, sob WSL2, a numeração lógica pode não seguir a ordem física esperada.
+    \item \textbf{Garantir acesso sequencial por linhas}: Em loops NumPy, a travessia orientada a linhas (padrão C contíguo) minimiza \textit{cache misses} e \textit{TLB misses}, evitando a penalidade estatisticamente comprovada de $4{,}11\%$.
+    \item \textbf{Auditar o link PCIe do SSD NVMe}: Verificar na BIOS se o link está negociado em Gen~4x4 (até $\approx 8$\,GB/s) em vez de Gen~3x4 (cujo limite prático é de $\approx 3{,}5$\,GB/s úteis, ou $\approx 3{,}94$\,GB/s brutos), desativando estados agressivos de economia de energia de barramento (PCIe L1) se necessário. Observa-se que o \textit{throughput} sequencial medido pelo \texttt{fio} (1.527\,MB/s) está muito abaixo do limite do link Gen~3x4, o que indica que o gargalo do I/O sequencial é a camada de virtualização do WSL2, e não a geração do enlace PCIe.
+\end{enumerate}
+
+% ============================================================
+\chapter{Considerações Finais}
+\label{chap:conclusao}
+% ============================================================
+
+Este relatório técnico realizou a caracterização física e de software da plataforma Intel Core i5-13420H sob virtualização WSL2/Hyper-V. Com protocolo de 30 amostras válidas, ICs a 95\% e testes t de Student bicaudais ($\alpha = 0{,}05$), foram avaliados: escalabilidade de paralelismo, penalidades de localidade de cache/TLB e flutuações de I/O virtualizado.
+
+Os testes de paralelismo rejeitam a hipótese de aceleração linear ($H_0$), corroborando $H_1$: o barramento DDR4 de canal único limita a vazão por fluxo a $\approx 7{,}07$\,GB/s, tornando ineficaz ($p = 0{,}0663$) a expansão para 12 threads. A análise de localidade confirma overhead sistemático de $4{,}11\%$ no percurso por colunas ($p = 0{,}0281$), evidenciando o custo real do acesso não-contíguo à memória. O subsistema de I/O virtualizado exibe flutuação expressiva (CV de $14\%$) pela cadeia de chaveamentos Hyper-V.
+
+Como trabalho futuro, recomenda-se aplicar o mesmo protocolo em instalação \textit{bare metal} do Linux, permitindo separar as penalidades exclusivas da virtualização das restrições inerentes à arquitetura heterogênea e ao controle térmico do i5-13420H.
+
+% ----------------------------------------------------------
+% ELEMENTOS PÓS-TEXTUAIS
+% ----------------------------------------------------------
+\postextual
+
+\bibliography{referencias}
+
+% ----------------------------------------------------------
+% ANEXOS
+% ----------------------------------------------------------
+\begin{anexosenv}
+
+\partanexos
+
+\chapter{Artefatos do Repositório}
+\label{anexo:artefatos}
+
+Para fins de reprodutibilidade, todos os dados brutos coletados e os scripts utilizados nos experimentos encontram-se disponíveis em repositório público. Os artefatos estão organizados nas pastas \texttt{dados/} (medições originais) e \texttt{scripts/} (implementações em Python com protocolo estatístico).
+
+\noindent\textbf{Arquivos de dados (\texttt{dados/}):}
+\begin{itemize}
+    \item \texttt{info\_cpu.txt} — saída de \texttt{lscpu} (identificação da CPU);
+    \item \texttt{saida\_paralelismo.txt} — médias, IC 95\% e p-valor do teste de paralelismo;
+    \item \texttt{saida\_localidade.txt} — IC 95\% e p-valor do teste de localidade;
+    \item \texttt{saida\_workload.txt} — médias e IC 95\% das fases do workload integrado;
+    \item \texttt{medicoes\_mbw.txt} — largura de banda de memória (\texttt{mbw});
+    \item \texttt{medicoes\_fio.txt} — benchmark de armazenamento (\texttt{fio});
+    \item \texttt{medicoes\_memoria.txt} — \texttt{free}, \texttt{vmstat} e \texttt{/proc/PID/status};
+    \item \texttt{medicoes\_pcie.txt} — links PCIe (LnkCap e LnkSta);
+    \item \texttt{medicoes\_interrupcoes.txt} — contagem de interrupções durante I/O;
+    \item \texttt{cinebench\_r23.txt} — pontuações do Cinebench R23.
+\end{itemize}
+
+\noindent\textbf{Scripts (\texttt{scripts/}):}
+\begin{itemize}
+    \item \texttt{teste\_paralelismo.py};
+    \item \texttt{teste\_localidade.py};
+    \item \texttt{workload\_completo.py}.
+\end{itemize}
+
+\noindent\textbf{Repositório:} \url{https://github.com/Pedro-Coutinho2612/infra-hw-artigo}
+
+\end{anexosenv}
+
+\end{document}
