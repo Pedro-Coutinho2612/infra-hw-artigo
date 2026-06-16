@@ -18,7 +18,8 @@
 \author{Pedro Coutinho da Silva\inst{1}}
 
 \address{CESAR School\\
-  Recife, PE, Brasil
+  Recife, PE, Brasil\\
+  Orientador: Prof. Ronierison Maciel
   \email{pcs4@cesar.school}
 }
 
@@ -27,7 +28,7 @@
 \maketitle
 
 \begin{resumo}
-Este artigo apresenta uma análise experimental do comportamento de desempenho da hierarquia de memória, dos subsistemas de I/O e do paralelismo de CPU em uma plataforma equipada com o processador Intel Core i5-13420H de 13ª geração, pertencente à microarquitetura Raptor Lake. Os experimentos foram conduzidos em ambiente de laboratório sob o sistema operacional Ubuntu 24.04 LTS executado sobre WSL2, empregando ferramentas como \textit{mbw}, \textit{fio}, \textit{stress-ng} e scripts de carga sintética. Os resultados demonstram que o gargalo primário do sistema avaliado é a largura de banda de memória principal, o que se manifesta na degradação de desempenho ao escalar o paralelismo além de quatro \textit{threads}. A análise dos barramentos PCIe revelou subutilização da capacidade do controlador NVMe, que opera em Gen~3x4 apesar de possuir capacidade para Gen~4x4. Os achados corroboram os princípios teóricos da Lei de Amdahl e da localidade de referência, evidenciando a necessidade de considerar a arquitetura de memória como fator central na avaliação de plataformas computacionais.
+Este artigo apresenta uma análise experimental do comportamento de desempenho da hierarquia de memória, dos subsistemas de I/O e do paralelismo de CPU em uma plataforma equipada com o processador Intel Core i5-13420H de 13ª geração, pertencente à microarquitetura Raptor Lake, com 8~GiB de RAM DDR4 instalados (7,6~GiB úteis ao sistema). Os experimentos foram conduzidos em ambiente de laboratório sob o sistema operacional Ubuntu 24.04 LTS executado sobre WSL2, empregando ferramentas como \textit{mbw}, \textit{fio}, \textit{stress-ng} e scripts de carga sintética. Os resultados demonstram que o gargalo primário do sistema avaliado é a largura de banda de memória principal, o que se manifesta na degradação de desempenho ao escalar o paralelismo além de quatro \textit{threads}. A análise dos barramentos PCIe revelou subutilização da capacidade do controlador NVMe, que opera em Gen~3x4 apesar de possuir capacidade para Gen~4x4. Os achados corroboram os princípios teóricos da Lei de Amdahl e da localidade de referência, evidenciando a necessidade de considerar a arquitetura de memória como fator central na avaliação de plataformas computacionais.
 \end{resumo}
 
 \section{Introdução}
@@ -54,13 +55,13 @@ O presente estudo se apoia nessas metodologias consolidadas, mas as aplica a um 
 
 A hierarquia de memória é um dos pilares da arquitetura de computadores moderna. Organiza os diferentes níveis de armazenamento --- registradores, caches L1, L2 e L3, memória principal DRAM e armazenamento secundário --- segundo uma relação inversa entre capacidade e velocidade de acesso \cite{patterson2021}. O princípio da localidade de referência fundamenta a eficácia dessa hierarquia: programas tendem a acessar, em um intervalo curto de tempo, as mesmas posições de memória (localidade temporal) ou posições adjacentes (localidade espacial) \cite{hennessy2017}.
 
-Quando um dado requisitado pelo processador não está presente nos caches (\textit{cache miss}), é necessário buscá-lo em um nível inferior da hierarquia, incorrendo em penalidades de latência que podem superar centenas de ciclos de \textit{clock}. Em sistemas com múltiplos núcleos, esse fenômeno é agravado pela disputa pela largura de banda do barramento de memória, o que pode tornar o desempenho agregado inferior ao esperado pelo escalonamento linear do número de núcleos \cite{mccalpin1995}.
+Quando um dado requisitado pelo processador não está presente nos caches (\textit{cache miss}), é necessário buscá-lo em um nível inferior da hierarquia, incorrendo em penalidades de latência que podem superar centenas de ciclos de \textit{clock}. Em sistemas com múltiplos núcleos, esse fenômeno é agravado pela disputa pela largura de banda do barramento de memória, o que pode tornar o desempenho agregado inferior ao esperado pelo escalonamento linear do número de núcleos \cite{mccalpin1995,rogers2009bandwidth,diamond2011evaluation}.
 
 O conceito de sistema \textit{memory-bound} descreve exatamente essa condição: a CPU permanece ociosa aguardando dados da memória principal, de modo que o aumento do poder de processamento não se traduz em ganho de desempenho \cite{williams2009}. A Lei de Amdahl formaliza esse limite ao expressar que a aceleração máxima de um programa é limitada pela fração sequencial ou pelo gargalo de recursos compartilhados \cite{amdahl1967}.
 
 \subsection{Processadores Híbridos: Arquitetura Intel Raptor Lake}
 
-A geração Raptor Lake da Intel, introduzida em 2022, consolidou a arquitetura heterogênea que combina P-cores baseados na microarquitetura Golden Cove com E-cores baseados na microarquitetura Gracemont em um mesmo pacote processador \cite{intel2022raptorlake}. Os P-cores operam com suporte a \textit{Hyper-Threading}, enquanto os E-cores não possuem SMT, otimizando a densidade de núcleos para tarefas de baixa prioridade e cargas paralelizáveis de menor intensidade computacional.
+A geração Raptor Lake da Intel, introduzida em 2022, consolidou a arquitetura heterogênea que combina P-cores baseados na microarquitetura Golden Cove com E-cores baseados na microarquitetura Gracemont em um mesmo pacote processador \cite{intel2021hybrid,intel2022raptorlake}. Os P-cores operam com suporte a \textit{Hyper-Threading}, enquanto os E-cores não possuem SMT, otimizando a densidade de núcleos para tarefas de baixa prioridade e cargas paralelizáveis de menor intensidade computacional.
 
 O i5-13420H, variante voltada para plataformas móveis, apresenta frequência base de 2,1~GHz e frequência \textit{turbo} de até 4,6~GHz, com suporte às extensões vetoriais AVX2 e AVX-VNNI. A hierarquia de cache é composta por 288~KiB de L1d, 192~KiB de L1i, 7,5~MiB de L2 e 12~MiB de cache L3 compartilhado entre todos os núcleos. O escalonador do sistema operacional, em conjunto com o Intel Thread Director, é responsável por distribuir tarefas entre P-cores e E-cores de acordo com a demanda computacional \cite{intel2022threaddir}.
 
@@ -79,7 +80,7 @@ O sistema operacional implementa memória virtual por meio de paginação, separ
 
 \subsection{Ambiente Experimental}
 
-Os experimentos foram conduzidos em uma estação de trabalho equipada com processador Intel Core i5-13420H (13ª geração, microarquitetura Raptor Lake), 7,6~GiB de RAM DDR4 e armazenamento NVMe com controlador SK Hynix (ID PCI 1C5C:1D59). O sistema operacional hospedeiro é o Windows 11, e os testes foram executados sobre o subsistema Ubuntu 24.04.3~LTS com kernel 6.6.87.2-microsoft-standard-WSL2. A GPU dedicada identificada opera via barramento PCIe Gen~4x8 (ID PCI 10DE:28A1).
+Os experimentos foram conduzidos em uma estação de trabalho equipada com processador Intel Core i5-13420H (13ª geração, microarquitetura Raptor Lake), 8~GiB de RAM DDR4 instalados (7,6~GiB úteis ao sistema), e armazenamento NVMe com controlador SK Hynix (ID PCI 1C5C:1D59). O sistema operacional hospedeiro é o Windows 11, e os testes foram executados sobre o subsistema Ubuntu 24.04.3~LTS com kernel 6.6.87.2-microsoft-standard-WSL2. A GPU dedicada identificada opera via barramento PCIe Gen~4x8 (ID PCI 10DE:28A1).
 
 \subsection{Ferramentas e Procedimentos}
 
@@ -157,15 +158,15 @@ A Tabela~\ref{tab:mbw} apresenta os resultados do benchmark \texttt{mbw} para os
 \end{tabular}
 \end{table}
 
-A ausência de queda de desempenho entre os três tamanhos evidencia que o array de 16~MiB já supera o cache L3 de 12~MiB, estabelecendo a memória principal como nível operante em todos os testes. Para observar a transição entre L3 e DRAM, seria necessário testar arrays em torno de 6--10~MiB. A vazão estável em torno de 7,3~GiB/s corresponde ao teto da largura de banda DDR4 disponível no sistema.
+A ausência de queda de desempenho entre os três tamanhos evidencia que o array de 16~MiB já supera o cache L3 de 12~MiB, estabelecendo a memória principal como nível operante em todos os testes. Para observar a transição entre L3 e DRAM, seria necessário testar arrays em torno de 6--10~MiB. A vazão estável em torno de 7,3~GiB/s corresponde à largura de banda sustentada por uma única \textit{stream} sequencial de cópia --- o \texttt{mbw} opera com um único fluxo de dados (\textit{single-thread}). O teto teórico agregado do canal DDR4 é da ordem de 25,6~GB/s; atingi-lo requer múltiplos fluxos de memória concorrentes. Portanto, 7,3~GiB/s representa o limite de uma única \textit{stream} sequencial, coerente com o regime \textit{memory-bound} identificado nos demais experimentos.
 
-O teste de localidade espacial registrou 4,54~s para o \textit{loop} com acesso sequencial por linhas da matriz e 5,17~s para o \textit{loop} com acesso por colunas, razão de 1,14x. Esse valor é inferior à expectativa teórica de múltiplos fatores para matrizes grandes, sugerindo que o \textit{hardware prefetcher} da Intel conseguiu antecipar parcialmente os acessos não sequenciais, atenuando a penalidade de localidade.
+O teste de localidade espacial registrou 4,54~s para o \textit{loop} com acesso sequencial por linhas da matriz e 5,17~s para o \textit{loop} com acesso por colunas, razão de 1,14x. Essa diferença indica que o acesso não-contíguo por colunas degrada a eficácia do \textit{prefetcher} de hardware e a localidade de cache e TLB: cada passo entre elementos adjacentes de uma coluna representa um salto de 32~KiB, impedindo a antecipação automática de linhas de cache contíguas. O custo dominante neste experimento é, contudo, o \textit{overhead} do interpretador Python, que percorre a matriz elemento a elemento em laço puro; o efeito de localidade permanece observável mesmo parcialmente mascarado por esse custo. \textit{TLB misses} e caminhadas na tabela de páginas (\textit{page table walks}) são um dos fatores plausíveis da degradação, mas não constituem sua causa única nem principal.
 
 \subsection{Memória RAM, Virtual e Armazenamento}
 
 O sistema dispõe de 7,6~GiB de RAM, com 5,6~GiB disponíveis em repouso e 2,0~GiB de \textit{swap}. Durante a pressão de 80\% via \texttt{stress-ng}, o campo \texttt{so} (\textit{swap-out}) do \texttt{vmstat} registrou valor de 22, enquanto \texttt{si} (\textit{swap-in}) permaneceu em zero, indicando paginação de saída sem recuperação de páginas do disco no intervalo de medição.
 
-A inspeção do processo Firefox via \texttt{/proc/PID/status} revelou \texttt{VmPeak} de 20.409.104~kB (aproximadamente 19,5~GiB) e \texttt{VmRSS} de 573.028~kB (aproximadamente 560~MB). A discrepância de 35x entre o espaço de endereçamento virtual reservado e a memória física ocupada ilustra o mecanismo de \textit{demand paging} do Linux: o kernel mapeia páginas virtuais sem alocar frames físicos até o primeiro acesso, tornando possível que um processo reserve dezenas de gigabytes de espaço virtual em uma máquina com apenas 7,6~GiB de RAM \cite{tanenbaum2015}.
+A inspeção do processo Firefox via \texttt{/proc/PID/status} revelou \texttt{VmPeak} de 20.409.104~kB (aproximadamente 19,5~GiB) e \texttt{VmRSS} de 573.028~kB (aproximadamente 560~MB). A discrepância de 35x entre o espaço de endereçamento virtual reservado e a memória física ocupada ilustra o mecanismo de \textit{demand paging} do Linux: o kernel mapeia páginas virtuais sem alocar frames físicos até o primeiro acesso, tornando possível que um processo reserve dezenas de gigabytes de espaço virtual em uma máquina com apenas 8~GiB de RAM instalados (7,6~GiB úteis ao sistema) \cite{tanenbaum2015}.
 
 O benchmark \texttt{fio} registrou \textit{throughput} sequencial de 1.527~MB/s e 1.918~IOPS com latência média de 517~$\mu$s para leituras aleatórias de 4~KiB. A Tabela~\ref{tab:pcie} apresenta os links PCIe identificados.
 
@@ -184,11 +185,11 @@ Controlador de rede & 14C3:7961 & Gen~2x1 & Gen~2x1 \\
 \end{tabular}
 \end{table}
 
-O controlador NVMe opera em Gen~3x4 apesar de possuir capacidade para Gen~4x4, limitando a largura de banda máxima de 8~GB/s (teórico Gen~4x4) para 4~GB/s (teórico Gen~3x4). Esse resultado indica subutilização da capacidade do dispositivo, possivelmente associada a limitações do \textit{host} ou do ambiente WSL2.
+O controlador NVMe opera em Gen~3x4 apesar de possuir capacidade para Gen~4x4, limitando a largura de banda bruta máxima de 8~GB/s (teórico Gen~4x4) para ~3,94~GB/s brutos (~3,5~GB/s úteis, teórico Gen~3x4). O \textit{throughput} sequencial medido pelo \texttt{fio} de 1.527~MB/s é substancialmente inferior a esse limite, o que indica que o link PCIe Gen~3x4 \emph{não} é o gargalo do I/O sequencial observado --- o fator limitante é a camada de virtualização do WSL2, que interpõe uma chamada ao hipervisor a cada operação de bloco. O resultado aponta subutilização da capacidade de interconexão do dispositivo; recomenda-se auditar a configuração do link na BIOS para verificar a possibilidade de habilitação do modo Gen~4x4.
 
 \subsection{Interrupções e I/O}
 
-A contagem de interrupções antes e após a transferência de 2~GB via \texttt{dd} registrou incrementos de +2.054 na linha \texttt{CAL} (\textit{Inter-Processor Interrupts}) e +2.008 na linha \texttt{HYP} (\textit{Hypervisor callback interrupts}). A correspondência entre os 2.008 \textit{callbacks} e os 2.000 blocos de 1~MiB transferidos confirma que cada conclusão de bloco gerou uma notificação separada do hipervisor Hyper-V para o kernel Linux convidado, comportamento esperado no WSL2, onde o armazenamento é mediado por uma camada de virtualização que replica a semântica de interrupção de um controlador NVMe físico.
+A contagem de interrupções antes e após a transferência de 2~GB via \texttt{dd} registrou incrementos de +2.054 na linha \texttt{CAL} (\textit{Inter-Processor Interrupts}) e +2.008 na linha \texttt{HYP} (\textit{Hypervisor callback interrupts}). A correspondência entre os 2.008 \textit{callbacks} e os 2.000 blocos de 1~MiB transferidos --- constatada por medição direta neste trabalho por meio do contador \texttt{/proc/interrupts} \cite{love2010linux} --- confirma que cada conclusão de bloco gerou uma notificação separada do hipervisor Hyper-V para o kernel Linux convidado. Esse comportamento é consequência estrutural da virtualização de dispositivos no WSL2 \cite{tanenbaum2015}: o armazenamento é mediado pela camada Hyper-V, que interpõe um \textit{callback} a cada operação de I/O completada, replicando para o sistema operacional convidado a semântica de interrupção de um controlador NVMe físico. A conclusão sobre o overhead de I/O no WSL2 apoia-se, portanto, na evidência medida neste trabalho, não em fontes externas.
 
 \subsection{Workload Integrado e Identificação do Gargalo}
 
@@ -202,6 +203,40 @@ A largura de banda de 4,29~GB/s medida na fase integrada é inferior à registra
 Este trabalho demonstrou experimentalmente que o gargalo primário da plataforma analisada é a largura de banda da memória principal, identificado pela degradação de desempenho ao escalar o paralelismo além de quatro \textit{threads}, pela estabilidade da vazão do \texttt{mbw} em todos os tamanhos de array testados e pela ociosidade de CPU durante a fase \textit{memory-bound} do workload integrado. A análise dos barramentos PCIe revelou assimetria entre a capacidade declarada do controlador NVMe (Gen~4x4) e o link efetivamente negociado (Gen~3x4), representando uma oportunidade de ganho de desempenho em I/O sequencial. O estudo da memória virtual ilustrou o funcionamento do mecanismo de \textit{demand paging} por meio da discrepância de 35x entre \texttt{VmPeak} e \texttt{VmRSS} do processo Firefox.
 
 Como trabalhos futuros, propõe-se a repetição dos experimentos com arrays menores que o cache L3 para caracterizar a curva completa de transição entre os níveis da hierarquia de memória, a avaliação do impacto do escalonamento de tarefas entre P-cores e E-cores em cargas heterogêneas e a comparação das medições em WSL2 com execução nativa em Linux, isolando o efeito da camada de virtualização sobre os subsistemas de memória e I/O.
+
+\appendix
+
+\section{Artefatos do Repositório}
+\label{sec:anexo}
+
+Os artefatos brutos que sustentam todos os resultados apresentados neste artigo encontram-se disponíveis em repositório público, garantindo a reprodutibilidade dos experimentos:
+
+\begin{center}
+\url{https://github.com/Pedro-Coutinho2612/infra-hw-artigo}
+\end{center}
+
+\noindent\textbf{Saídas de medição} (diretório \texttt{dados/}):
+
+\begin{itemize}
+  \item \texttt{info\_cpu.txt} --- saída completa do \texttt{lscpu} com identificação do processador
+  \item \texttt{cinebench\_r23.txt} --- resultados do Cinebench R23 (\textit{single} e \textit{multi core})
+  \item \texttt{saida\_paralelismo.txt} --- resultados do teste de escalabilidade de \textit{threads}
+  \item \texttt{saida\_localidade.txt} --- resultados do teste de localidade espacial (linhas vs. colunas)
+  \item \texttt{saida\_workload.txt} --- resultados do workload integrado (fases CPU, memória e I/O)
+  \item \texttt{medicoes\_mbw.txt} --- saída do \texttt{mbw} para arrays de 16, 128 e 1.024~MiB
+  \item \texttt{medicoes\_fio.txt} --- saída do \texttt{fio} (sequencial 1~MiB e aleatório 4~KiB)
+  \item \texttt{medicoes\_memoria.txt} --- saída de \texttt{free}, \texttt{vmstat} e \texttt{/proc/PID/status}
+  \item \texttt{medicoes\_pcie.txt} --- links PCIe (\texttt{LnkCap}/\texttt{LnkSta}) via \texttt{lspci -vv}
+  \item \texttt{medicoes\_interrupcoes.txt} --- diferença de \texttt{/proc/interrupts} antes/após \texttt{dd}
+\end{itemize}
+
+\noindent\textbf{Scripts Python} (diretório \texttt{scripts/}):
+
+\begin{itemize}
+  \item \texttt{teste\_paralelismo.py} --- varia o número de processos (1, 2, 4, máx.) e mede \textit{speedup}
+  \item \texttt{teste\_localidade.py} --- compara acesso por linhas e por colunas em matriz NumPy
+  \item \texttt{workload\_completo.py} --- três fases (CPU-\textit{bound}, \textit{memory-bound}, I/O-\textit{bound}) com monitoramento por núcleo via \texttt{psutil}
+\end{itemize}
 
 \bibliographystyle{sbc}
 \bibliography{referencias}

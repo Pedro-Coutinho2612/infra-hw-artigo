@@ -1,0 +1,94 @@
+\begin{thebibliography}{}
+
+\bibitem[Amdahl 1967]{amdahl1967}
+Amdahl, G.~M. (1967).
+\newblock Validity of the single processor approach to achieving large scale
+  computing capabilities.
+\newblock In {\em Proceedings of the Spring Joint Computer Conference (AFIPS)},
+  pages 483--485, New York, NY. ACM.
+
+\bibitem[Budruk et~al. 2003]{budruk2003}
+Budruk, R., Anderson, D., and Shanley, T. (2003).
+\newblock {\em PCI Express System Architecture}.
+\newblock Addison-Wesley, Boston, MA.
+
+\bibitem[Diamond et~al. 2011]{diamond2011evaluation}
+Diamond, J., Burtscher, M., McCalpin, J.~D., Kim, B.-D., Keckler, S.~W., and
+  Browne, J.~C. (2011).
+\newblock Evaluation and optimization of multicore performance bottlenecks in
+  supercomputing applications.
+\newblock In {\em Proceedings of the IEEE International Symposium on
+  Performance Analysis of Systems and Software (ISPASS)}, pages 32--43, Austin,
+  TX. IEEE.
+
+\bibitem[Hennessy and Patterson 2017]{hennessy2017}
+Hennessy, J.~L. and Patterson, D.~A. (2017).
+\newblock {\em Computer Architecture: A Quantitative Approach}.
+\newblock Morgan Kaufmann, Cambridge, MA, 6 edition.
+
+\bibitem[{Intel Corporation} 2021]{intel2021hybrid}
+{Intel Corporation} (2021).
+\newblock Intel performance hybrid architecture and software optimizations,
+  part one: Introduction.
+\newblock White Paper 349168, Intel Corporation.
+\newblock Dispon{\'\i}vel em:
+  \url{https://cdrdv2-public.intel.com/685861/211115_Hybrid_WP_1_Introduction_v1.2.pdf}.
+
+\bibitem[{Intel Corporation} 2022a]{intel2022raptorlake}
+{Intel Corporation} (2022a).
+\newblock 13th generation intel core processors: Datasheet, volume 1.
+\newblock Technical report, Intel Corporation.
+\newblock Dispon{\'\i}vel em:
+  \url{https://www.intel.com/content/www/us/en/products/docs/processors/core/13th-gen-core-datasheet-vol-1.html}.
+
+\bibitem[{Intel Corporation} 2022b]{intel2022threaddir}
+{Intel Corporation} (2022b).
+\newblock Intel thread director: Delivering optimal performance for hybrid
+  architecture.
+\newblock Technical report, Intel Corporation.
+\newblock Dispon{\'\i}vel em:
+  \url{https://www.intel.com/content/www/us/en/developer/articles/technical/intel-thread-director.html}.
+
+\bibitem[Love 2010]{love2010linux}
+Love, R. (2010).
+\newblock {\em Linux Kernel Development}.
+\newblock Addison-Wesley, Upper Saddle River, NJ, 3 edition.
+
+\bibitem[McCalpin 1995]{mccalpin1995}
+McCalpin, J.~D. (1995).
+\newblock {STREAM}: Sustainable memory bandwidth in high performance computers.
+\newblock Technical report, University of Virginia.
+\newblock Dispon{\'\i}vel em: \url{https://www.cs.virginia.edu/stream/}.
+
+\bibitem[McVoy and Staelin 1996]{mcvoy1996}
+McVoy, L. and Staelin, C. (1996).
+\newblock lmbench: Portable tools for performance analysis.
+\newblock In {\em Proceedings of the USENIX Annual Technical Conference}, pages
+  279--294, San Diego, CA. USENIX Association.
+
+\bibitem[Patterson and Hennessy 2021]{patterson2021}
+Patterson, D.~A. and Hennessy, J.~L. (2021).
+\newblock {\em Computer Organization and Design RISC-V Edition: The Hardware
+  Software Interface}.
+\newblock Morgan Kaufmann, Cambridge, MA, 2 edition.
+
+\bibitem[Rogers et~al. 2009]{rogers2009bandwidth}
+Rogers, B.~M., Krishna, A., Bell, G.~B., Vu, K., Jiang, X., and Solihin, Y.
+  (2009).
+\newblock Scaling the bandwidth wall: Challenges in and avenues for {CMP}
+  scaling.
+\newblock In {\em Proceedings of the 36th Annual International Symposium on
+  Computer Architecture (ISCA)}, pages 371--382, New York, NY. ACM.
+
+\bibitem[Tanenbaum and Bos 2015]{tanenbaum2015}
+Tanenbaum, A.~S. and Bos, H. (2015).
+\newblock {\em Organiza{\c c}{\~a}o Estruturada de Computadores}.
+\newblock Pearson, S{\~a}o Paulo, 6 edition.
+
+\bibitem[Williams et~al. 2009]{williams2009}
+Williams, S., Waterman, A., and Patterson, D. (2009).
+\newblock Roofline: An insightful visual performance model for multicore
+  architectures.
+\newblock {\em Communications of the ACM}, 52(4):65--76.
+
+\end{thebibliography}
